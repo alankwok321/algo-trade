@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlgoTrade — AI Chess-Style Trading Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>♞</text></svg>">
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ===== HEADER ===== -->
+  <header class="header">
+    <div class="logo">
+      <span class="logo-icon">♞</span>
+      <span>AlgoTrade</span>
+      <span class="logo-sub">AI Chess Engine</span>
+    </div>
+
+    <div class="header-controls">
+      <button class="ctrl-btn play" id="btn-play">▶ Play</button>
+      <button class="ctrl-btn pause" id="btn-pause">⏸ Pause</button>
+      <button class="ctrl-btn reset" id="btn-reset">↻ Reset</button>
+
+      <div class="speed-group">
+        <button class="speed-btn active" data-speed="1">1x</button>
+        <button class="speed-btn" data-speed="5">5x</button>
+        <button class="speed-btn" data-speed="10">10x</button>
+        <button class="speed-btn" data-speed="50">50x</button>
+      </div>
+
+      <select class="header-select" id="strategy-select" title="AI Strategy">
+        <option value="auto">🤖 Auto (AI Picks)</option>
+        <option value="momentum">📈 Momentum</option>
+        <option value="meanReversion">🔄 Mean Reversion</option>
+        <option value="breakout">💥 Breakout</option>
+        <option value="value">💎 Value</option>
+        <option value="scalping">⚡ Scalping</option>
+      </select>
+
+      <select class="header-select" id="scenario-select" title="Market Scenario">
+        <option value="normal">Normal Market</option>
+        <option value="bull">🐂 Bull Market</option>
+        <option value="bear">🐻 Bear Market</option>
+        <option value="sideways">➡️ Sideways</option>
+        <option value="crash">💥 Crash</option>
+      </select>
+    </div>
+
+    <div class="header-info">
+      <span id="day-counter">Day 1</span>
+      <span id="tick-counter">Tick 0/78</span>
+    </div>
+  </header>
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <!-- Watchlist -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">📊 Watchlist</div>
+      <div id="watchlist-body"></div>
+    </div>
+
+    <!-- AI Portfolio -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">🤖 AI Portfolio</div>
+      <div class="portfolio-panel">
+        <div class="stat-row"><span class="stat-label">Cash</span><span class="stat-value" id="ai-cash">$10,000.00</span></div>
+        <div class="stat-row"><span class="stat-label">Total Value</span><span class="stat-value" id="ai-value">$10,000.00</span></div>
+        <div class="stat-row"><span class="stat-label">P&L</span><span class="stat-value" id="ai-pnl">$0.00</span></div>
+        <div class="stat-row"><span class="stat-label">Return</span><span class="stat-value" id="ai-return">0.00%</span></div>
+        <div class="stat-row"><span class="stat-label">Trades</span><span class="stat-value" id="ai-trades">0</span></div>
+        <div class="stat-row"><span class="stat-label">Win Rate</span><span class="stat-value" id="ai-winrate">0%</span></div>
+        <div id="ai-holdings"></div>
+      </div>
+    </div>
+
+    <!-- User Portfolio -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">👤 Your Portfolio</div>
+      <div class="portfolio-panel">
+        <div class="stat-row"><span class="stat-label">Cash</span><span class="stat-value" id="user-cash">$10,000.00</span></div>
+        <div class="stat-row"><span class="stat-label">Total Value</span><span class="stat-value" id="user-value">$10,000.00</span></div>
+        <div class="stat-row"><span class="stat-label">P&L</span><span class="stat-value" id="user-pnl">$0.00</span></div>
+        <div class="stat-row"><span class="stat-label">Return</span><span class="stat-value" id="user-return">0.00%</span></div>
+        <div class="stat-row"><span class="stat-label">Trades</span><span class="stat-value" id="user-trades">0</span></div>
+        <div class="stat-row"><span class="stat-label">Win Rate</span><span class="stat-value" id="user-winrate">0%</span></div>
+        <div id="user-holdings"></div>
+        <div class="trade-controls">
+          <input type="number" id="user-qty" value="10" min="1" max="9999">
+          <button class="btn-buy" id="btn-user-buy">BUY</button>
+          <button class="btn-sell" id="btn-user-sell">SELL</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== CHART ===== -->
+  <main class="chart-area">
+    <div class="chart-header">
+      <span class="chart-symbol" id="chart-symbol">NOVA — Nova Technologies</span>
+      <span class="chart-sector" id="chart-sector">Tech Growth</span>
+      <div id="ticker-info"></div>
+    </div>
+    <div class="indicator-toggles">
+      <button class="ind-toggle active" data-ind="sma20">SMA20</button>
+      <button class="ind-toggle active" data-ind="ema9">EMA9</button>
+      <button class="ind-toggle" data-ind="sma50">SMA50</button>
+      <button class="ind-toggle" data-ind="bb">BB</button>
+    </div>
+    <div id="chart-container"></div>
+  </main>
+
+  <!-- ===== BOTTOM PANEL ===== -->
+  <div class="bottom-panel">
+    <!-- Trade History -->
+    <div class="bottom-section">
+      <div class="bottom-title">📋 Trade History</div>
+      <div class="bottom-content" id="trade-log"></div>
+    </div>
+
+    <!-- Market Events -->
+    <div class="bottom-section">
+      <div class="bottom-title">📰 Market Events</div>
+      <div class="bottom-content" id="event-log"></div>
+    </div>
+
+    <!-- Performance -->
+    <div class="bottom-section">
+      <div class="bottom-title">📊 Performance</div>
+      <div class="bottom-content">
+        <div class="perf-compare">
+          <div class="perf-col">
+            <div class="perf-col-title">🤖 AI</div>
+            <div class="perf-stat"><span class="perf-label">Sharpe</span><span class="perf-val" id="perf-ai-sharpe">0.00</span></div>
+            <div class="perf-stat"><span class="perf-label">Max DD</span><span class="perf-val" id="perf-ai-dd">0.00%</span></div>
+          </div>
+          <div class="perf-col">
+            <div class="perf-col-title">👤 You</div>
+            <div class="perf-stat"><span class="perf-label">Sharpe</span><span class="perf-val" id="perf-user-sharpe">0.00</span></div>
+            <div class="perf-stat"><span class="perf-label">Max DD</span><span class="perf-val" id="perf-user-dd">0.00%</span></div>
+          </div>
+        </div>
+        <div class="score-bar-container">
+          <div class="score-bar"><div class="score-bar-fill" id="score-bar-fill"></div></div>
+          <div id="score-label">Tied</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== AI THINKING PANEL ===== -->
+  <div class="thinking-panel">
+    <div class="thinking-header">
+      <span class="chess-icon">♞</span>
+      AI Engine Analysis
+    </div>
+    <div id="ai-thinking">
+      <div class="thinking-idle">AI engine idle — press Play to start</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+<script src="js/indicators.js"></script>
+<script src="js/market.js"></script>
+<script src="js/portfolio.js"></script>
+<script src="js/ai-engine.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
