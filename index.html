@@ -11,6 +11,25 @@
 </head>
 <body>
 
+<!-- Mode Selector Overlay (shown on first load or via toggle) -->
+<div id="mode-selector-overlay" class="mode-overlay" style="display:none;">
+  <div class="mode-dialog">
+    <div class="mode-dialog-title">Choose Trading Mode</div>
+    <div class="mode-cards">
+      <div class="mode-card" id="mode-card-sim">
+        <div class="mode-card-icon">🎮</div>
+        <div class="mode-card-name">Simulated</div>
+        <div class="mode-card-desc">AI-generated market with 8 fictional stocks. Random events, multiple sectors.</div>
+      </div>
+      <div class="mode-card" id="mode-card-real">
+        <div class="mode-card-icon">📈</div>
+        <div class="mode-card-name">Real Market</div>
+        <div class="mode-card-desc">Real Yahoo Finance data. Replay historical prices for AAPL, TSLA, and more.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="app-layout">
 
   <!-- ===== HEADER ===== -->
@@ -22,6 +41,14 @@
     </div>
 
     <div class="header-controls">
+      <!-- Mode Toggle -->
+      <div class="mode-toggle" id="mode-toggle">
+        <button class="mode-btn active" data-mode="sim" id="mode-btn-sim">🎮 Simulated</button>
+        <button class="mode-btn" data-mode="real" id="mode-btn-real">📈 Real Market</button>
+      </div>
+
+      <div class="header-divider"></div>
+
       <button class="ctrl-btn play" id="btn-play">▶ Play</button>
       <button class="ctrl-btn pause" id="btn-pause">⏸ Pause</button>
       <button class="ctrl-btn reset" id="btn-reset">↻ Reset</button>
@@ -33,7 +60,8 @@
         <button class="speed-btn" data-speed="50">50x</button>
       </div>
 
-      <select class="header-select" id="strategy-select" title="AI Strategy">
+      <!-- Sim-only controls -->
+      <select class="header-select sim-only" id="strategy-select" title="AI Strategy">
         <option value="auto">🤖 Auto (AI Picks)</option>
         <option value="momentum">📈 Momentum</option>
         <option value="meanReversion">🔄 Mean Reversion</option>
@@ -42,12 +70,21 @@
         <option value="scalping">⚡ Scalping</option>
       </select>
 
-      <select class="header-select" id="scenario-select" title="Market Scenario">
+      <select class="header-select sim-only" id="scenario-select" title="Market Scenario">
         <option value="normal">Normal Market</option>
         <option value="bull">🐂 Bull Market</option>
         <option value="bear">🐻 Bear Market</option>
         <option value="sideways">➡️ Sideways</option>
         <option value="crash">💥 Crash</option>
+      </select>
+
+      <!-- Real-market-only: range selector -->
+      <select class="header-select real-only" id="range-select" title="Date Range" style="display:none;">
+        <option value="3mo">3 Months</option>
+        <option value="6mo">6 Months</option>
+        <option value="1y" selected>1 Year</option>
+        <option value="2y">2 Years</option>
+        <option value="5y">5 Years</option>
       </select>
     </div>
 
@@ -59,8 +96,43 @@
 
   <!-- ===== SIDEBAR ===== -->
   <aside class="sidebar">
-    <!-- Watchlist -->
-    <div class="sidebar-section">
+    <!-- Real Market: Stock Search (hidden by default) -->
+    <div class="sidebar-section real-only" id="stock-search-section" style="display:none;">
+      <div class="sidebar-title">🔍 Stock Search</div>
+      <div class="stock-search-panel">
+        <div class="search-input-wrap">
+          <input type="text" id="stock-search-input" placeholder="Search ticker (e.g. AAPL)" autocomplete="off" spellcheck="false">
+          <button id="stock-search-btn" class="search-go-btn">→</button>
+        </div>
+        <div id="search-results" class="search-results"></div>
+        <div class="popular-tickers">
+          <div class="popular-label">Popular</div>
+          <div class="ticker-chips">
+            <button class="ticker-chip" data-symbol="AAPL">AAPL</button>
+            <button class="ticker-chip" data-symbol="TSLA">TSLA</button>
+            <button class="ticker-chip" data-symbol="GOOGL">GOOGL</button>
+            <button class="ticker-chip" data-symbol="MSFT">MSFT</button>
+            <button class="ticker-chip" data-symbol="NVDA">NVDA</button>
+            <button class="ticker-chip" data-symbol="AMZN">AMZN</button>
+            <button class="ticker-chip" data-symbol="META">META</button>
+            <button class="ticker-chip" data-symbol="SPY">SPY</button>
+          </div>
+        </div>
+        <!-- Real market stock info -->
+        <div id="real-stock-info" class="real-stock-info" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Real Market: Backtest Results (hidden by default) -->
+    <div class="sidebar-section real-only" id="backtest-section" style="display:none;">
+      <div class="sidebar-title">📊 Backtest Results</div>
+      <div class="portfolio-panel" id="backtest-results">
+        <div class="holding-empty">Load a stock and press Play to backtest</div>
+      </div>
+    </div>
+
+    <!-- Watchlist (sim only) -->
+    <div class="sidebar-section sim-only" id="watchlist-section">
       <div class="sidebar-title">📊 Watchlist</div>
       <div id="watchlist-body"></div>
     </div>
@@ -138,11 +210,18 @@
             <div class="perf-col-title">🤖 AI</div>
             <div class="perf-stat"><span class="perf-label">Sharpe</span><span class="perf-val" id="perf-ai-sharpe">0.00</span></div>
             <div class="perf-stat"><span class="perf-label">Max DD</span><span class="perf-val" id="perf-ai-dd">0.00%</span></div>
+            <div class="perf-stat real-only" style="display:none;"><span class="perf-label">Return</span><span class="perf-val" id="perf-ai-return">0.00%</span></div>
           </div>
           <div class="perf-col">
             <div class="perf-col-title">👤 You</div>
             <div class="perf-stat"><span class="perf-label">Sharpe</span><span class="perf-val" id="perf-user-sharpe">0.00</span></div>
             <div class="perf-stat"><span class="perf-label">Max DD</span><span class="perf-val" id="perf-user-dd">0.00%</span></div>
+            <div class="perf-stat real-only" style="display:none;"><span class="perf-label">Return</span><span class="perf-val" id="perf-user-return">0.00%</span></div>
+          </div>
+          <div class="perf-col real-only" id="perf-bnh-col" style="display:none;">
+            <div class="perf-col-title">📊 Buy&Hold</div>
+            <div class="perf-stat"><span class="perf-label">Return</span><span class="perf-val" id="perf-bnh-return">0.00%</span></div>
+            <div class="perf-stat"><span class="perf-label">Max DD</span><span class="perf-val" id="perf-bnh-dd">0.00%</span></div>
           </div>
         </div>
         <div class="score-bar-container">
@@ -170,6 +249,7 @@
 <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 <script src="js/indicators.js"></script>
 <script src="js/market.js"></script>
+<script src="js/real-market.js"></script>
 <script src="js/portfolio.js"></script>
 <script src="js/ai-engine.js"></script>
 <script src="js/chart.js"></script>
